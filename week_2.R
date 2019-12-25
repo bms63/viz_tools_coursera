@@ -4,6 +4,9 @@
 library(ggplot2)
 library(maps)
 library(tidyverse)
+library(viridis)
+library(ggmap)
+library(gridExtra)
 
 
 us_map <- map_data("state")
@@ -51,7 +54,83 @@ world <- map_data("world") %>%
   geom_polygon(fill = "thistle", color = "black") + 
   theme_void()
 
+# Introduce  viridis color scheme
+data(votes.repub)
+head(votes.repub)
+votes.repub %>%
+  tbl_df() %>%
+  mutate(state = rownames(votes.repub),
+         state = tolower(state)) %>%
+  right_join(us_map, by = c("state" = "region")) %>%
+  ggplot(aes(x = long, y = lat, group = group, fill = `1976`)) +
+  geom_polygon(color = "black") + 
+  theme_void() + 
+  scale_fill_viridis(name = "Republican\nvotes (%)")
+
+# Serial Podcast
+library(readr)
+serial <- read_csv(paste0("https://raw.githubusercontent.com/",
+                          "dgrtwo/serial-ggvis/master/input_data/",
+                          "serial_podcast_data/serial_map_data.csv"))
+head(serial, 3)
+
+# Converts x,y variable to lat and longitue
+serial <- serial %>%
+  mutate(long = -76.8854 + 0.00017022 * x,
+         lat  = 39.23822 + 1.371014e-04 * y,
+         tower = Type == "cell-site")
+serial %>%
+  slice(c(1:3, (n() - 3):(n())))
+
+# Getting map of baltimore county
+maryland <- map_data('county', region = 'maryland')
+head(maryland)
+baltimore <- maryland %>%
+  filter(subregion %in% c("baltimore city", "baltimore"))
+head(baltimore, 3)
+
+# Base map of two counties "baltimore city", "baltimore"
+ggplot(baltimore, aes(x = long, y = lat, group = group)) + 
+  geom_polygon(fill = "lightblue", color = "black") + 
+  theme_void()
+
+ggplot(baltimore, aes(x = long, y = lat, group = group)) + 
+  geom_polygon(fill = "lightblue", color = "black") + 
+  geom_point(data = serial, aes(group = NULL, color = tower)) + 
+  theme_void() + 
+  scale_color_manual(name = "Cell tower", values = c("black", "red"))
+
+# Google API Maps - Had to do some Enable stuff on Google Cloud Services
+beijing <- get_map("Beijing", zoom = 12)
+ggmap(beijing)
+
+philly <- get_map("Philadelphia", zoom = 15)
+ggmap(philly)
+
+# Maps of Philly side by side
+map_1 <- get_map("Philadelphia", zoom = 12,
+                 source = "google", maptype = "terrain") %>%
+  ggmap(extent = "device")
+
+map_2 <- get_map("Philadelphia", zoom = 12,
+                 source = "stamen", maptype = "watercolor") %>%
+  ggmap(extent = "device")
+
+map_3 <- get_map("Philadelphia", zoom = 12,
+                 source = "google", maptype = "hybrid") %>%
+  ggmap(extent = "device")
 
 
+grid.arrange(map_1, map_2, map_3, nrow = 1) 
+
+# Putting Serial data onto a Google Map
+get_map("Baltimore County", zoom = 10, 
+        source = "stamen", maptype = "toner") %>%
+  ggmap() + 
+  geom_polygon(data = baltimore, aes(x = long, y = lat, group = group),
+               color = "navy", fill = "lightblue", alpha = 0.2) + 
+  geom_point(data = serial, aes(x = long, y = lat, color = tower)) + 
+  theme_void() + 
+  scale_color_manual(name = "Cell tower", values = c("black", "red"))
 
 
