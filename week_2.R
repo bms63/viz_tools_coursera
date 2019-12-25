@@ -7,6 +7,8 @@ library(tidyverse)
 library(viridis)
 library(ggmap)
 library(gridExtra)
+library(choroplethr)
+library(choroplethrMaps)
 
 
 us_map <- map_data("state")
@@ -133,4 +135,32 @@ get_map("Baltimore County", zoom = 10,
   theme_void() + 
   scale_color_manual(name = "Cell tower", values = c("black", "red"))
 
+# Counties and States
 
+data(df_pop_county)
+df_pop_county %>% slice(1:3)
+
+#entire country
+county_choropleth(df_pop_county)
+
+# Two States
+county_choropleth(df_pop_county, state_zoom = c("colorado", "wyoming", "pennsylvania"))
+
+# Google reference map
+county_choropleth(df_pop_county, state_zoom = c("north carolina"),
+                  reference_map = TRUE)
+
+library(readr)
+floyd_events <- read_csv(paste0("https://raw.githubusercontent.com/coop711/r_programming_2/master/data/floyd_events.csv")) 
+floyd_events %>% slice(1:3)
+
+floyd_data <- floyd_events %>% 
+  group_by(fips) %>%
+  dplyr::summarize(n_events = n()) %>%
+  mutate(fips = as.numeric(fips)) %>%
+  dplyr::rename(region = fips, 
+                value = n_events) 
+
+county_choropleth(floyd_data, state_zoom = c("north carolina", "virginia"),
+                    reference_map = TRUE)
+  
