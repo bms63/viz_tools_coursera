@@ -9,6 +9,10 @@ library(ggmap)
 library(gridExtra)
 library(choroplethr)
 library(choroplethrMaps)
+library(faraway) 
+library(plotly)
+library(readr)
+
 
 
 us_map <- map_data("state")
@@ -70,7 +74,6 @@ votes.repub %>%
   scale_fill_viridis(name = "Republican\nvotes (%)")
 
 # Serial Podcast
-library(readr)
 serial <- read_csv(paste0("https://raw.githubusercontent.com/",
                           "dgrtwo/serial-ggvis/master/input_data/",
                           "serial_podcast_data/serial_map_data.csv"))
@@ -150,7 +153,6 @@ county_choropleth(df_pop_county, state_zoom = c("colorado", "wyoming", "pennsylv
 county_choropleth(df_pop_county, state_zoom = c("north carolina"),
                   reference_map = TRUE)
 
-library(readr)
 floyd_events <- read_csv(paste0("https://raw.githubusercontent.com/coop711/r_programming_2/master/data/floyd_events.csv")) 
 floyd_events %>% slice(1:3)
 
@@ -164,3 +166,115 @@ floyd_data <- floyd_events %>%
 county_choropleth(floyd_data, state_zoom = c("north carolina", "virginia"),
                     reference_map = TRUE)
   
+
+# htmlwidgets
+data(worldcup)
+
+
+plot_ly(worldcup, type = "scatter",
+        x = ~ Time, y = ~ Shots, color = ~ Position)
+
+plot_ly(worldcup, type = "scatter",
+        x = ~ Time, y = ~ Shots, color = I("blue"))
+
+worldcup %>%
+  mutate(Name = rownames(worldcup)) %>%
+  plot_ly(x = ~ Time, y = ~ Shots, color = ~ Position) %>%
+  add_markers(text = ~ Name, hoverinfo = "text")
+
+worldcup %>%
+  mutate(Name = rownames(worldcup)) %>%
+  plot_ly(x = ~ Time, y = ~ Passes, color = ~ Position) %>%
+  add_markers(text = ~ Name, hoverinfo = "text")
+
+worldcup %>%
+  mutate(Name = rownames(worldcup)) %>%
+  plot_ly(x = ~ Time, y = ~ Tackles, color = ~ Position) %>%
+  add_markers(text = ~ Name, hoverinfo = "text")
+
+# Customized markers!
+worldcup %>%
+  mutate(Name = rownames(worldcup)) %>%
+  plot_ly(x = ~ Time, y = ~ Shots, color = ~ Position) %>%
+  add_markers(text = ~ paste("<b>Name:</b> ", Name, "<br />", 
+                             "<b>Team:</b> ", Team),
+              hoverinfo = "text")
+
+worldcup %>%
+  plot_ly(x = ~ Time, y = ~ Shots, color = ~ Position) %>%
+  add_markers()
+
+read_csv("data/floyd_track.csv") %>%
+  plot_ly(x = ~ datetime, y = ~ max_wind) %>% 
+  add_lines() %>%
+  rangeslider()
+
+# 3d plots
+worldcup %>%
+  plot_ly(x = ~ Time, y = ~ Shots, z = ~ Passes,
+          color = ~ Position, size = I(3)) %>%
+  add_markers()
+
+
+# This is very nice!
+plot_ly(z = ~ volcano, type = "surface")
+
+# Using ggplot and plotly together
+worldcup_scatter <- worldcup %>%
+  ggplot(aes(x = Time, y = Shots, color = Position)) + 
+  geom_point() 
+ggplotly(worldcup_scatter)
+
+
+## Leaflet
+
+library(tigris)
+denver_tracts <- tracts(state = "CO", county = 31, cb = TRUE)
+load("data/fars_colorado.RData")
+denver_fars <- driver_data %>% 
+  filter(county == 31 & longitud < -104.5)
+
+library(leaflet)
+leaflet()
+
+leaflet() %>%
+  addTiles()
+
+leaflet() %>%
+  addTiles() %>%
+  addMarkers(data = denver_fars, lng = ~ longitud, lat = ~ latitude)
+
+leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(data = denver_fars, radius = 2,
+                   lng = ~ longitud, lat = ~ latitude)
+
+# Splits up points as you zoom in
+leaflet() %>%
+  addTiles() %>%
+  addMarkers(data = denver_fars, 
+             lng = ~ longitud, lat = ~ latitude,
+             clusterOptions = markerClusterOptions())
+
+leaflet() %>%
+  addProviderTiles("Stamen.Watercolor") %>%
+  addCircleMarkers(data = denver_fars, radius = 2,
+                   lng = ~ longitud, lat = ~ latitude)
+leaflet() %>%
+  addProviderTiles("Thunderforest.TransportDark") %>%
+  addCircleMarkers(data = denver_fars, radius = 2, color = I("red"),
+                   lng = ~ longitud, lat = ~ latitude)
+
+# Popups for points
+leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(data = denver_fars, radius = 2, 
+                   lng = ~ longitud, lat = ~ latitude,
+                   popup = ~ paste(age))
+
+# Customized popup
+leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(data = denver_fars, radius = 2, 
+                   lng = ~ longitud, lat = ~ latitude,
+                   popup = ~ paste("<b>Driver age:</b>", age))
